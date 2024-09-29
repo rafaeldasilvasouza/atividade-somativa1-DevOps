@@ -22,7 +22,7 @@ jobs:
           template: "avatar-with-link"
           include-extras: true
 
-      # Instalar dependências do Python, incluindo pytest
+      # Instalar dependências do Python, incluindo pytest e outras do projeto
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
+          pip install -r requirements.txt
 
       # Executa os testes e salva o resultado em um arquivo
       - name: Run Pytest and Save Results
