@@ -22,6 +22,17 @@ jobs:
           template: "avatar-with-link"
           include-extras: true
 
+      # Instalar dependências do Python, incluindo pytest
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
       # Executa os testes e salva o resultado em um arquivo
       - name: Run Pytest and Save Results
         run: |
@@ -42,6 +53,14 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" -X POST -d \
           '{"content": "✅ Testes unitários foram executados com sucesso na Pull Request! Todos os testes passaram sem erros."}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+
+      # Alerta para quando os testes são executados com sucesso (geral)
+      - name: Notify Success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d \
+          '{"content": "✅ CI/CD Pipeline concluído com sucesso! Todas as etapas passaram sem erros."}' \
           ${{ secrets.DISCORD_WEBHOOK }}
 
       # Alerta para quando os testes falharem ou não houver número suficiente de testes
