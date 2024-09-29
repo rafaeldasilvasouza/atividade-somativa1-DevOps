@@ -22,7 +22,40 @@ jobs:
           template: "avatar-with-link"
           include-extras: true
 
-      # Alerta para quando os testes são executados com sucesso
+      # Instalar dependências do Python, incluindo pytest e outras do projeto
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Executa os testes e salva o resultado em um arquivo
+      - name: Run Pytest and Save Results
+        run: |
+          pytest --junitxml=test-results.xml
+
+      # Verificar se há pelo menos cinco testes e se todos passaram
+      - name: Check Number of Tests
+        run: |
+          TEST_COUNT=$(xmllint --xpath 'count(//testsuite/testcase)' test-results.xml)
+          if [ "$TEST_COUNT" -lt 5 ]; then
+            echo "Número insuficiente de testes!"
+            exit 1
+          fi
+
+      # Alerta para quando os testes são executados com sucesso na Pull Request
+      - name: Notify Success for PR
+        if: success() && github.event_name == 'pull_request'
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d \
+          '{"content": "✅ Testes unitários foram executados com sucesso na Pull Request! Todos os testes passaram sem erros."}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+
+      # Alerta para quando os testes são executados com sucesso (geral)
       - name: Notify Success
         if: success()
         run: |
@@ -30,10 +63,10 @@ jobs:
           '{"content": "✅ CI/CD Pipeline concluído com sucesso! Todas as etapas passaram sem erros."}' \
           ${{ secrets.DISCORD_WEBHOOK }}
 
-      # Alerta para quando os testes falharem
+      # Alerta para quando os testes falharem ou não houver número suficiente de testes
       - name: Notify Failure
         if: failure()
         run: |
           curl -H "Content-Type: application/json" -X POST -d \
-          '{"content": "❌ CI/CD Pipeline falhou! Verifique os logs para detalhes e corrija o problema."}' \
+          '{"content": "❌ CI/CD Pipeline falhou! Verifique os logs para detalhes e garanta que pelo menos cinco testes unitários foram executados."}' \
           ${{ secrets.DISCORD_WEBHOOK }}
