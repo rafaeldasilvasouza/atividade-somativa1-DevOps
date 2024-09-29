@@ -44,6 +44,14 @@ jobs:
           '{"content": "✅ Testes unitários foram executados com sucesso na Pull Request! Todos os testes passaram sem erros."}' \
           ${{ secrets.DISCORD_WEBHOOK }}
 
+      # Alerta para quando os testes são executados com sucesso (geral)
+      - name: Notify Success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d \
+          '{"content": "✅ CI/CD Pipeline concluído com sucesso! Todas as etapas passaram sem erros."}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+
       # Alerta para quando os testes falharem ou não houver número suficiente de testes
       - name: Notify Failure
         if: failure()
