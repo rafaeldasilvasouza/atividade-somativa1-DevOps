@@ -1,23 +1,53 @@
 name: Discord Alertas
 
 on:
-  workflow_run:
-    workflows: ["Continuous Integration"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   discord:
-    if: ${{ github.event.workflow_run.conclusion != 'success' }}
     runs-on: ubuntu-latest
-
     steps:
-      - name: Send Discord Notification
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
+      - uses: actions/checkout@v4
+
+      # Alerta para uma notificação geral de push
+      - name: Run Discord Webhook for Push
+        uses: Sniddl/discord-commits@v1.6
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          template: "avatar-with-link"
+          include-extras: true
+
+      # Executa os testes e salva o resultado em um arquivo
+      - name: Run Pytest and Save Results
         run: |
-          if [ ${{ github.event.workflow_run.conclusion }} != "success" ]; then
-            curl -H "Content-Type: application/json" -X POST -d \
-            '{"content": "⚠️ CI Pipeline falhou para o commit: '${{ github.event.workflow_run.head_commit.message }}'."}' \
-            $DISCORD_WEBHOOK_URL
+          pytest --junitxml=test-results.xml
+
+      # Verificar se há pelo menos cinco testes e se todos passaram
+      - name: Check Number of Tests
+        run: |
+          TEST_COUNT=$(xmllint --xpath 'count(//testsuite/testcase)' test-results.xml)
+          if [ "$TEST_COUNT" -lt 5 ]; then
+            echo "Número insuficiente de testes!"
+            exit 1
           fi
+
+      # Alerta para quando os testes são executados com sucesso na Pull Request
+      - name: Notify Success for PR
+        if: success() && github.event_name == 'pull_request'
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d \
+          '{"content": "✅ Testes unitários foram executados com sucesso na Pull Request! Todos os testes passaram sem erros."}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+
+      # Alerta para quando os testes falharem ou não houver número suficiente de testes
+      - name: Notify Failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d \
+          '{"content": "❌ CI/CD Pipeline falhou! Verifique os logs para detalhes e garanta que pelo menos cinco testes unitários foram executados."}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
