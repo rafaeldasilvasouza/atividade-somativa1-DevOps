@@ -33,6 +33,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Instalar xmllint
+      - name: Install xmllint
+        run: sudo apt-get install -y libxml2-utils
+
       # Executa os testes e salva o resultado em um arquivo
       - name: Run Pytest and Save Results
         run: |
